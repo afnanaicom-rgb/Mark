@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Afnan AI - SVGA Store</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/svgaplayerweb@2.3.1/build/svga.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --card-bg: #1a1a1a;
+            --text-main: #ffffff;
+            --accent-color: #00d2ff;
+            --price-color: #00ff88;
+            --header-bg: rgba(13, 13, 13, 0.9);
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #212529;
+            --accent-color: #007bff;
+            --price-color: #28a745;
+            --header-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        header {
+            padding: 12px 5%; display: flex; justify-content: space-between; align-items: center;
+            background: var(--header-bg); backdrop-filter: blur(10px);
+            position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid rgba(128,128,128,0.1);
+        }
+
+        .overlay-menu {
+            height: 100%; width: 100%; position: fixed; z-index: 2000;
+            top: -100%; left: 0; background: var(--bg-color);
+            transition: 0.3s ease-in-out;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+        }
+        .overlay-menu.active { top: 0; }
+        .overlay-menu a { font-size: 1.5rem; text-decoration: none; color: var(--text-main); font-weight: bold; }
+
+        .banner-container {
+            width: 94%; max-width: 1200px; margin: 15px auto; height: 140px;
+            border-radius: 12px; overflow: hidden; position: relative;
+        }
+        .banner-track { display: flex; height: 100%; }
+        .slide { min-width: 100%; height: 100%; background-size: cover; background-position: center; }
+
+        .products-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+            padding: 10px; max-width: 1200px; margin: 0 auto;
+        }
+        
+        .product-card {
+            background: var(--card-bg); border-radius: 12px; overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.05);
+            display: flex; flex-direction: column; padding-bottom: 8px;
+        }
+
+        /* حاوية التصميم */
+        .svga-container {
+            width: 100%; aspect-ratio: 1 / 1; background: #000;
+            position: relative; overflow: hidden; display: flex; align-items: center;
+        }
+        
+        /* الإطار SVGA أصغر وجهة اليمين */
+        .svga-player-canvas { 
+            width: 100% !important; 
+            height: 60% !important;
+            transform: translateX(25px);
+            z-index: 2;
+            margin: auto;
+        }
+        
+        /* الصورة (الحوية) جهة اليسار */
+        .product-overlay-img {
+            position: absolute; 
+            top: 50%; left: 15px;
+            transform: translateY(-50%);
+            width: 60%; height: 60%;
+            object-fit: contain; pointer-events: none; z-index: 1;
+        }
+        
+        .watermark { 
+            position: absolute; bottom: 5px; right: 8px; font-size: 0.5rem; 
+            opacity: 0.4; z-index: 10; color: #fff;
+        }
+
+        .info { padding: 8px; text-align: center; }
+        .info h3 { font-size: 0.8rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .price { color: var(--price-color); font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; display: block; }
+        
+        .buy-btn {
+            width: 90%; margin: 0 auto; padding: 8px; border: none;
+            border-radius: 6px; background: var(--accent-color); color: #fff;
+            font-weight: bold; font-size: 0.75rem; cursor: pointer;
+        }
+
+        /* FAB - فوري جداً */
+        #fab-container {
+            position: fixed; bottom: 80px; left: 20px; z-index: 9999;
+            width: 55px; height: 55px; background: var(--accent-color);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1.5rem; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: transform 0.1s;
+        }
+
+        #fab-container:active {
+            transform: scale(0.95);
+        }
+
+        .fab-menu {
+            position: absolute; bottom: 65px; left: 50%; transform: translateX(-50%) scale(0);
+            display: flex; flex-direction: column; gap: 12px;
+            transition: transform 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transform-origin: bottom;
+            pointer-events: none;
+        }
+
+        .fab-menu.open { 
+            transform: translateX(-50%) scale(1); 
+            pointer-events: auto;
+        }
+
+        .fab-item {
+            width: 45px; height: 45px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; color: #fff; text-decoration: none;
+            font-size: 1.3rem; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+
+        .fab-item:active {
+            transform: scale(0.9);
+        }
+
+        footer { text-align: center; padding: 20px; font-size: 0.75rem; opacity: 0.6; }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <div id="topMenu" class="overlay-menu">
+        <div style="position:absolute; top:20px; right:20px; font-size:2rem" onclick="toggleNav()">&times;</div>
+        <a href="#" onclick="toggleNav()">إطارات</a>
+        <a href="#" onclick="toggleNav()">دخوليات</a>
+        <a href="#" onclick="toggleNav()">شارات</a>
+        <a href="#" onclick="toggleNav()">هدايا</a>
+    </div>
+
+    <header>
+        <i class="fa-solid fa-bars-staggered" style="cursor:pointer; font-size:1.3rem" onclick="toggleNav()"></i>
+        <div style="font-weight:900; letter-spacing:1px; font-size: 1.1rem;">AFNAN <span style="color:var(--accent-color)">AI</span></div>
+        <i class="fa-solid fa-circle-half-stroke" style="cursor:pointer; font-size:1.3rem" onclick="toggleTheme()"></i>
+    </header>
+
+    <div class="banner-container">
+        <div class="banner-track" id="bannerTrack">
+            <div class="slide" style="background:#222; display:flex; align-items:center; justify-content:center; font-size: 0.8rem;">تحميل العروض...</div>
+        </div>
+    </div>
+
+    <main class="products-grid" id="mainGrid"></main>
+
+    <!-- خدمة العملاء الفورية -->
+    <div id="fab-container">
+        <i class="fa-solid fa-headset"></i>
+        <div class="fab-menu" id="fabMenu">
+            <a href="#" class="fab-item" style="background:#e60023" title="Pinterest"><i class="fa-brands fa-pinterest"></i></a>
+            <a href="#" class="fab-item" style="background:#0088cc" title="Telegram"><i class="fa-brands fa-telegram"></i></a>
+            <a href="#" class="fab-item" style="background:#25D366" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+        </div>
+    </div>
+
+    <footer>حقوق النشر © Afnan AI 2026</footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3qsfnpQE5JAlHRCtPMEqJKMcKTYuXiZA",
+            authDomain: "font-51914274-ae88c.firebaseapp.com",
+            projectId: "font-51914274-ae88c",
+            storageBucket: "font-51914274-ae88c.firebasestorage.app",
+            messagingSenderId: "73048802436",
+            appId: "1:73048802436:web:8ea6c8bfbd6995f910aed1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = "font-51914274-ae88c";
+        const parser = new SVGA.Parser();
+
+        // تخزين البيانات مؤقتاً
+        let productsData = [];
+        let bannersData = [];
+        let adminLink = '';
+        let loadedCount = 0;
+
+        async function init() {
+            await signInAnonymously(auth);
+            
+            // جلب رابط الأدمن أولاً
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'adminContact'), (snap) => {
+                if(snap.exists()) {
+                    adminLink = snap.data().link || '#';
+                    window.adminLinkGlobal = adminLink;
+                }
+                checkAndRender();
+            });
+
+            // جلب المنتجات
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), (snap) => {
+                productsData = [];
+                snap.forEach(d => productsData.push({id: d.id, ...d.data()}));
+                checkAndRender();
+            });
+
+            // جلب البنرات
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'banners'), (snap) => {
+                bannersData = [];
+                snap.forEach(d => bannersData.push(d.data()));
+                checkAndRender();
+            });
+        }
+
+        function checkAndRender() {
+            loadedCount++;
+            // عرض كل شيء مرة واحدة عند اكتمال التحميل
+            if(loadedCount >= 3) {
+                renderBanners();
+                renderProducts();
+            }
+        }
+
+        function renderBanners() {
+            const track = document.getElementById('bannerTrack');
+            if(bannersData.length === 0) return;
+            track.innerHTML = '';
+            bannersData.forEach(data => {
+                const s = document.createElement('div');
+                s.className = 'slide';
+                s.style.backgroundImage = `url(${data.image})`;
+                track.appendChild(s);
+            });
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('mainGrid');
+            grid.innerHTML = '';
+            productsData.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                const svgaId = `svga-${product.id}`;
+                
+                card.innerHTML = `
+                    <div class="svga-container">
+                        ${product.imageUrl ? `<img src="${product.imageUrl}" class="product-overlay-img">` : ''}
+                        <div id="${svgaId}" class="svga-player-canvas"></div>
+                        <div class="watermark">AFNAN AI</div>
+                    </div>
+                    <div class="info">
+                        <h3>${product.name}</h3>
+                        <span class="price">${product.price}$</span>
+                        <button class="buy-btn">شراء الآن</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+
+                if(product.svgaUrl) {
+                    const player = new SVGA.Player(`#${svgaId}`);
+                    parser.load(product.svgaUrl, (videoItem) => {
+                        player.setVideoItem(videoItem);
+                        player.startAnimation();
+                    });
+                }
+            });
+        }
+
+        init();
+    </script>
+
+    <script>
+        function toggleNav() { document.getElementById('topMenu').classList.toggle('active'); }
+        function toggleTheme() {
+            const b = document.body;
+            b.setAttribute('data-theme', b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        }
+
+        // FAB Logic - استجابة فورية
+        const fab = document.getElementById('fab-container');
+        const menu = document.getElementById('fabMenu');
+        let isMenuOpen = false;
+
+        // استخدام click بدلاً من pointer لتجنب التعارض
+        fab.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if(isMenuOpen) {
+                // إذا كانت القائمة مفتوحة، افتح رابط الأدمن
+                if(window.adminLinkGlobal) {
+                    window.open(window.adminLinkGlobal, '_blank');
+                }
+            } else {
+                // افتح القائمة
+                menu.classList.add('open');
+                isMenuOpen = true;
+            }
+        });
+
+        // إغلاق القائمة عند النقر خارجها
+        document.addEventListener('click', (e) => {
+            if(!fab.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.remove('open');
+                isMenuOpen = false;
+            }
+        });
+
+        // حفظ رابط الأدمن عالمياً
+        window.adminLinkGlobal = '';
+    </script>
+</body>
+</html>
