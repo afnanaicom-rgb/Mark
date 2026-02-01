@@ -7,7 +7,6 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/svgaplayerweb@2.3.1/build/svga.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
         :root {
@@ -173,6 +172,7 @@
             background-position: center; 
         }
 
+        /* شبكة المنتجات - منتجين في الصف على جميع الشاشات */
         .products-grid {
             display: grid; 
             grid-template-columns: repeat(2, 1fr); 
@@ -180,6 +180,33 @@
             padding: 10px; 
             max-width: 1200px; 
             margin: 0 auto;
+            width: 100%;
+        }
+
+        /* على الشاشات الصغيرة جداً - منتج واحد */
+        @media (max-width: 480px) {
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
+                padding: 8px;
+                gap: 8px;
+            }
+        }
+
+        /* على الشاشات المتوسطة - منتجين */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
+                padding: 10px;
+            }
+        }
+
+        /* على الشاشات الكبيرة - منتجين */
+        @media (min-width: 769px) {
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
+                padding: 15px;
+                gap: 15px;
+            }
         }
         
         .product-card {
@@ -407,9 +434,15 @@
 
         .cart-items-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .cart-items-container {
+                grid-template-columns: 1fr;
+            }
         }
 
         .cart-item {
@@ -486,6 +519,7 @@
             text-align: center;
             padding: 60px 20px;
             color: rgba(255, 255, 255, 0.5);
+            grid-column: 1/-1;
         }
 
         .empty-cart i {
@@ -537,8 +571,29 @@
             margin-bottom: 30px;
         }
 
-        #google-signin-btn {
+        .google-login-btn {
             width: 100%;
+            padding: 12px;
+            background: #4285F4;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+
+        .google-login-btn:hover {
+            background: #357ae8;
+        }
+
+        .google-login-btn:active {
+            transform: scale(0.98);
         }
 
         footer { 
@@ -573,22 +628,20 @@
             }
         }
 
-        @media (max-width: 480px) {
-            .products-grid {
-                grid-template-columns: 1fr;
-            }
+        .login-btn {
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
 
-            .cart-items-container {
-                grid-template-columns: 1fr;
-            }
-
-            header {
-                padding: 10px 3%;
-            }
-
-            .header-right {
-                gap: 10px;
-            }
+        .login-btn:active {
+            transform: scale(0.95);
         }
     </style>
 </head>
@@ -615,7 +668,7 @@
                 <img id="userAvatar" class="user-avatar" alt="User">
                 <span id="userName" style="font-size: 0.9rem;"></span>
             </div>
-            <button id="loginBtn" onclick="showLoginModal()" style="background: var(--accent-color); color: #000; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">دخول</button>
+            <button id="loginBtn" class="login-btn" onclick="showLoginModal()">دخول</button>
         </div>
     </header>
 
@@ -657,7 +710,9 @@
         <div class="login-content">
             <h2>تسجيل الدخول</h2>
             <p>سجل دخولك باستخدام حسابك في جوجل</p>
-            <div id="google-signin-btn"></div>
+            <button class="google-login-btn" onclick="loginWithGoogle()">
+                <i class="fa-brands fa-google"></i> دخول عبر جوجل
+            </button>
         </div>
     </div>
 
@@ -731,34 +786,16 @@
             document.getElementById('loginModal').classList.remove('active');
         }
 
-        // إعداد Google Sign-In
-        window.onload = function() {
-            google.accounts.id.initialize({
-                client_id: '73048802436-8d8r8d8r8d8r8d8r8d8r8d8r8d8r8d8r.apps.googleusercontent.com',
-                callback: handleCredentialResponse
-            });
-
-            google.accounts.id.renderButton(
-                document.getElementById('google-signin-btn'),
-                { 
-                    theme: 'dark', 
-                    size: 'large',
-                    text: 'signin_with'
-                }
-            );
-        };
-
-        function handleCredentialResponse(response) {
-            const token = response.credential;
-            const credential = GoogleAuthProvider.credential(null, token);
-            
+        // تسجيل الدخول عبر جوجل
+        window.loginWithGoogle = function() {
             signInWithPopup(auth, googleProvider).then((result) => {
                 currentUser = result.user;
                 updateUserUI();
                 closeLoginModal();
                 showToast('تم تسجيل الدخول بنجاح!');
             }).catch((error) => {
-                showToast('خطأ في تسجيل الدخول', 'error');
+                console.error('خطأ في تسجيل الدخول:', error);
+                showToast('خطأ في تسجيل الدخول: ' + error.message, 'error');
             });
         }
 
@@ -902,7 +939,7 @@
             
             if(shoppingCart.length === 0) {
                 container.innerHTML = `
-                    <div class="empty-cart" style="grid-column: 1/-1;">
+                    <div class="empty-cart">
                         <i class="fa-solid fa-inbox"></i>
                         <p>السلة فارغة</p>
                     </div>
@@ -985,7 +1022,6 @@
         }
 
         window.filterCategory = function(category) {
-            // يمكن إضافة فلترة حسب الفئة هنا
             console.log('Filter by:', category);
         }
 
